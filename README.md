@@ -281,3 +281,66 @@ terraform apply -auto-approve
 terraform state list    //show terraform creation state
 ```
 ---
+##### Step 6 - Variable pass with terraform.tfvars
+###### 6.1 Modify variables.tf
+```bash
+variable "server_config" {
+  type = object({
+    name = string,
+    type = string
+  })
+  description = "This is sever config for sever create state"
+
+  validation {
+    condition     = length(var.server_config.name) > 7 && length(var.server_config.name) < 20
+    error_message = "Server name must be between 7 and 20 words"
+  }
+
+  validation {
+    condition = contains(["t2.micro", "t3a.micro"], var.server_config.type)
+    error_message = "Must be either t2.micro or t3.micro"
+  }
+}
+```
+###### 6.2 Modify instances.tf
+```bash
+# 1 - Data Block
+data "aws_ami" "ubuntu" {
+  most_recent = true
+
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+
+  owners = ["099720109477"] # Canonical
+}
+
+# 2 - Instance Block
+resource "aws_instance" "web" {
+  ami           = data.aws_ami.ubuntu.id
+  instance_type = var.server_config.type
+
+  tags = {
+    Name = var.server_config.name
+  }
+}
+```
+###### 6.3 Create terraform.tfvars
+```bash
+server_config = {
+  name = "test-server"
+  type = "t2.micro"
+}
+```
+###### 6.4 Terraform command
+```bash
+terraform plan
+terraform apply -auto-approve
+terrafrom stat list
+```

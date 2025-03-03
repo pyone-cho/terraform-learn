@@ -18,9 +18,9 @@ data "aws_ami" "ubuntu" {
 # 2 - Instance Block
 resource "aws_instance" "web" {
   ami           = data.aws_ami.ubuntu.id
-  instance_type = var.server_type
+  instance_type = var.server_config.type
 
   tags = {
-    Name = var.server_name
+    Name = var.server_config.name
   }
 }

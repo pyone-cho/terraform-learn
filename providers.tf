@@ -1,8 +1,3 @@
-# terraform-learn
-Learning Terryform
-
-##### Add provider.tf
-```bash
 # 1- Terraform Block and attach s3 for backend
 terraform {
   required_providers {
@@ -17,9 +12,3 @@ terraform {
 provider "aws" {
   region = "ap-southeast-1"
 }
-```
-###### Terraform command
-```Bash
-terraform init
-```
----

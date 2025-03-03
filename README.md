@@ -11,14 +11,6 @@ terraform {
       version = "5.89.0"
     }
   }
-
-backend "s3" {
-    bucket         = "kpc-terraform-backend"
-    dynamodb_table = "TerraformLock"
-    encrypt        = true
-    key            = "development/terraform-learn/state"    //terraform state save path
-    region         = "ap-southeast-1"
-  }
 }
 
 # 2 - Provider Block
@@ -143,8 +135,31 @@ resource "aws_s3_bucket_versioning" "versioning" {
   }
 }
 ```
-###### 3.4 Terraform command
 ###### 3.4 Modifie "main providers.tf" for backend lock
+```bash
+terraform {
+  required_providers {
+    aws = {
+      source = "hashicorp/aws"
+      version = "5.89.0"
+    }
+  }
+
+  backend "s3" {
+    bucket         = "kpc-terraform-backend"
+    dynamodb_table = "TerraformLock"
+    encrypt        = true
+    key            = "development/terraform-learn/state"    //terraform state save path
+    region         = "ap-southeast-1"
+  }
+}
+
+# 2 - Provider Block
+provider "aws" {
+  region = "ap-southeast-1"
+}
+```
+###### 3.5 Terraform command
 ```bash
 cd backend
 terraform init
@@ -155,4 +170,54 @@ cd ..
 terraform init
 terraform plan
 terraform apply -auto-approve
+```
+
+##### Step 4 - Add variables.tf for request instance name but default
+###### 4.1 Add variables.tf 
+```bash
+variable "server_name" {
+  type        = string
+  description = "This is request server name block"
+  default     = "test-server"
+  validation {
+    condition     = length(var.server_name) > 7 && length(var.server_name) < 20
+    error_message = "Server name must be between 7 and 20 words"
+  }
+}
+```
+###### 4.2 Modify instances.tf
+```bash
+# 1 - Data Block
+data "aws_ami" "ubuntu" {
+  most_recent = true
+
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+
+  owners = ["099720109477"] # Canonical
+}
+
+# 2 - Instance Block
+resource "aws_instance" "web" {
+  ami           = data.aws_ami.ubuntu.id
+  instance_type = "t2.micro"
+
+  tags = {
+    Name = var.server_name
+  }
+}
+```
+###### 4.3 Terraform command
+```bash
+terraform init
+terraform plan
+terraform apply -auto-approve
+terraform state list    //show terraform creation state
 ```

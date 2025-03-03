@@ -6,6 +6,14 @@ terraform {
       version = "5.89.0"
     }
   }
+
+  backend "s3" {
+    bucket         = "kpc-terraform-backend"
+    dynamodb_table = "TerraformLock"
+    encrypt        = true
+    key            = "development/terraform-learn/state"    //terraform state save path
+    region         = "ap-southeast-1"
+  }
 }
 
 # 2 - Provider Block

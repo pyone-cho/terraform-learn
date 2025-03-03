@@ -1,7 +1,7 @@
 # terraform-learn
 Learning Terryform
 
-##### Add provider.tf
+##### Step 1 - Add provider.tf
 ```bash
 # 1- Terraform Block and attach s3 for backend
 terraform {
@@ -10,6 +10,14 @@ terraform {
       source = "hashicorp/aws"
       version = "5.89.0"
     }
+  }
+
+backend "s3" {
+    bucket         = "kpc-terraform-backend"
+    dynamodb_table = "TerraformLock"
+    encrypt        = true
+    key            = "development/terraform-learn/state"    //terraform state save path
+    region         = "ap-southeast-1"
   }
 }
 
@@ -23,7 +31,7 @@ provider "aws" {
 terraform init
 ```
 ---
-##### Add instances.tf
+##### Step 2 - Add instances.tf
 ```bash
 # 1 - Data Block
 data "aws_ami" "ubuntu" {
@@ -58,3 +66,93 @@ terraform paln
 terraform apply -auto-approve
 ```
 ---
+##### Step 3 - Add Backend Resource and Terraform Lock
+###### 3.1 Add providers.tf
+```bash
+# 1- Terraform Block
+terraform {
+  required_providers {
+    aws = {
+      source = "hashicorp/aws"
+      version = "5.89.0"
+    }
+  }
+}
+
+# 2 - Provider Block
+provider "aws" {
+  region = "ap-southeast-1"
+}
+```
+###### 3.2 Add dynamodb.tf
+```bash
+# 1 - Create dynamodb table for terraform lock
+resource "aws_dynamodb_table" "terraform_lock" {
+  name = "TerraformLock"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key = "LockID"
+
+  attribute {
+    name = "LockID"
+    type = "S"
+  }
+}
+```
+###### 3.3 Add s3.tf
+```bash
+# 1 - Create S3 Bucket
+resource "aws_s3_bucket" "backend-bucket" {
+  bucket = "kpc-terraform-backend"
+
+  tags = {
+    Name        = "Terraform Backend"
+    Environment = "Dev"
+  }
+
+  force_destroy = true
+}
+
+# 2 - S3 Public Access Block
+resource "aws_s3_bucket_public_access_block" "public_access" {
+  bucket = aws_s3_bucket.backend-bucket.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+
+}
+
+# 3 - S3 Encryption
+resource "aws_s3_bucket_server_side_encryption_configuration" "encryption" {
+  bucket = aws_s3_bucket.backend-bucket.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+# 4 - S3 Versioning
+resource "aws_s3_bucket_versioning" "versioning" {
+  bucket = aws_s3_bucket.backend-bucket.id
+  
+  versioning_configuration {
+    status = "Disabled"
+  }
+}
+```
+###### 3.4 Terraform command
+###### 3.4 Modifie "main providers.tf" for backend lock
+```bash
+cd backend
+terraform init
+terraform plan
+terraform apply -auto-approve
+terraform state list    //show terraform creation state
+cd ..
+terraform init
+terraform plan
+terraform apply -auto-approve
+```

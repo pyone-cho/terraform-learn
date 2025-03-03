@@ -23,6 +23,7 @@ provider "aws" {
 terraform init
 ```
 ---
+
 ##### Step 2 - Add instances.tf
 ```bash
 # 1 - Data Block
@@ -58,6 +59,7 @@ terraform paln
 terraform apply -auto-approve
 ```
 ---
+
 ##### Step 3 - Add Backend Resource and Terraform Lock
 ###### 3.1 Add providers.tf
 ```bash
@@ -171,6 +173,7 @@ terraform init
 terraform plan
 terraform apply -auto-approve
 ```
+---
 
 ##### Step 4 - Add variables.tf for request instance name but default
 ###### 4.1 Add variables.tf 
@@ -216,8 +219,65 @@ resource "aws_instance" "web" {
 ```
 ###### 4.3 Terraform command
 ```bash
-terraform init
 terraform plan
 terraform apply -auto-approve
 terraform state list    //show terraform creation state
 ```
+---
+
+##### Step 5 - Modify variables.tf and instances.tf
+###### 5.1 Modify variables.tf
+```bash
+variable "server_name" {
+  type        = string
+  description = "This block is request server name"
+  validation {
+    condition     = length(var.server_name) > 7 && length(var.server_name) < 20
+    error_message = "Server name must be between 7 and 20 words"
+  }
+}
+variable "server_type" {
+  type = string
+  description = "This block is Choosing server instance type"
+  validation {
+    condition = contains(["t2.micro", "t3a.micro"], var.server_type)
+    error_message = "Must be either t2.micro or t3.micro"
+  }
+}
+```
+###### 5.2 Modify instances.tf
+```bash
+# 1 - Data Block
+data "aws_ami" "ubuntu" {
+  most_recent = true
+
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+
+  owners = ["099720109477"] # Canonical
+}
+
+# 2 - Instance Block
+resource "aws_instance" "web" {
+  ami           = data.aws_ami.ubuntu.id
+  instance_type = var.server_type
+
+  tags = {
+    Name = var.server_name
+  }
+}
+```
+###### 5.3 Terraform command
+```bash
+terraform plan
+terraform apply -auto-approve
+terraform state list    //show terraform creation state
+```
+---

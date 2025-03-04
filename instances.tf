@@ -1,3 +1,9 @@
+# 1 - Add Local file
+locals {
+  server_name = var.server_config.name
+  server_type = var.server_config.type
+}
+
 # 1 - Data Block
 data "aws_ami" "ubuntu" {
   most_recent = true
@@ -20,9 +26,9 @@ resource "aws_instance" "web" {
     count = var.create_instance ? 1 : 0     // count = var.function ? desire_ec2 : 0
 
   ami           = data.aws_ami.ubuntu.id
-  instance_type = var.server_config.type
+  instance_type = local.server_type
 
   tags = {
-    Name = var.server_config.name
+    Name = local.server_type
   }
 }

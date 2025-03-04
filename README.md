@@ -344,3 +344,77 @@ terraform plan
 terraform apply -auto-approve
 terrafrom stat list
 ```
+---
+
+##### Step 7 - Create instace with variables.tf
+###### 7.1 modify variables.tf
+```bash
+  type = object({
+    name = string,
+    type = string
+  })
+  description = "This is sever config for sever create state"
+
+  validation {
+    condition     = length(var.server_config.name) > 7 && length(var.server_config.name) < 20
+    error_message = "Server name must be between 7 and 20 words"
+  }
+
+  validation {
+    condition = contains(["t2.micro", "t3a.micro"], var.server_config.type)
+    error_message = "Must be either t2.micro or t3.micro"
+  }
+}
+
+variable "create_instance" {
+  type = bool
+  description = "This block is create instace with variable"
+  default = false
+}
+```
+###### 7.2 Modify in instances.tf
+```bash
+# 1 - Data Block
+data "aws_ami" "ubuntu" {
+  most_recent = true
+
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+
+  owners = ["099720109477"] # Canonical
+}
+
+# 2 - Instance Block
+resource "aws_instance" "web" {
+    count = var.create_instance ? 1 : 0   // count = var.function ? desire_ec2 : 0
+
+  ami           = data.aws_ami.ubuntu.id
+  instance_type = var.server_config.type
+
+  tags = {
+    Name = var.server_config.name
+  }
+}
+```
+###### 7.3 modify terraform.tfvars
+```bash
+server_config = {
+  name = "test-server"
+  type = "t2.micro"
+}
+
+create_instance = true
+```
+###### 7.4 Terraform command
+```bash
+terraform paln
+terraform apply -auto-approve
+```
+---

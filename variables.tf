@@ -15,3 +15,9 @@ variable "server_config" {
     error_message = "Must be either t2.micro or t3.micro"
   }
 }
+
+variable "create_instance" {
+  type = bool
+  description = "This block is create instace with variable"
+  default = true
+}
